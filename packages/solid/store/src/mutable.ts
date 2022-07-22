@@ -98,12 +98,9 @@ export function createMutable<T extends StoreNode>(state: T, options?: { name?: 
     throw new Error(
       `Unexpected type ${typeof unwrappedStore} received when initializing 'createMutable'. Expected an object.`
     );
-  const wrappedStore = wrap(
-    unwrappedStore,
-    "_SOLID_DEV_" && ((options && options.name) || DEV.hashValue(unwrappedStore))
-  );
+  const wrappedStore = wrap(unwrappedStore, "_SOLID_DEV_" && options && options.name);
   if ("_SOLID_DEV_") {
-    const name = (options && options.name) || DEV.hashValue(unwrappedStore);
+    const name = options && options.name;
     DEV.registerGraph(name, { value: unwrappedStore });
   }
   return wrappedStore;
