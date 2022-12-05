@@ -186,7 +186,7 @@ export function createSignal<T>(value?: T, options?: SignalOptions<T>): Signal<T
   };
 
   if ("_SOLID_DEV_" && !options.internal)
-    s.name = registerGraph(options.name || hashValue(value), s as { value: unknown });
+    s.name = registerGraph(options.name || "s", s as { value: unknown });
 
   const setter: Setter<T | undefined> = (value?: unknown) => {
     if (typeof value === "function") {
@@ -1044,38 +1044,6 @@ export function devComponent<T>(Comp: (props: T) => JSX.Element, props: T) {
   return c.tValue !== undefined ? c.tValue : c.value;
 }
 
-export function hashValue(v: any): string {
-  const s = new Set();
-  return `s${
-    typeof v === "string"
-      ? hash(v)
-      : hash(
-          untrack(
-            () =>
-              JSON.stringify(v, (k, v) => {
-                if (typeof v === "object" && v != null) {
-                  if (s.has(v)) return;
-                  s.add(v);
-                  const keys = Object.keys(v);
-                  const desc = Object.getOwnPropertyDescriptors(v);
-                  const newDesc = keys.reduce((memo, key) => {
-                    const value = desc[key];
-                    // skip getters
-                    if (!value.get) memo[key] = value;
-                    return memo;
-                  }, {} as any);
-                  v = Object.create({}, newDesc);
-                }
-                if (typeof v === "bigint") {
-                  return `${v.toString()}n`;
-                }
-                return v;
-              }) || ""
-          )
-        )
-  }`;
-}
-
 export function registerGraph(name: string, value: { value: unknown }): string {
   let tryName = name;
   if (Owner) {
@@ -1085,17 +1053,6 @@ export function registerGraph(name: string, value: { value: unknown }): string {
     Owner.sourceMap[tryName] = value;
   }
   return tryName;
-}
-interface GraphRecord {
-  [k: string]: GraphRecord | unknown;
-}
-export function serializeGraph(owner?: Owner | null): GraphRecord {
-  owner || (owner = Owner);
-  if (!"_SOLID_DEV_" || !owner) return {};
-  return {
-    ...serializeValues(owner.sourceMap),
-    ...(owner.owned ? serializeChildren(owner) : {})
-  };
 }
 
 export type ContextProviderComponent<T> = FlowComponent<{ value: T }>;
@@ -1685,33 +1642,6 @@ function createProvider(id: symbol, options?: EffectOptions) {
     );
     return res;
   };
-}
-
-function hash(s: string) {
-  for (var i = 0, h = 9; i < s.length; ) h = Math.imul(h ^ s.charCodeAt(i++), 9 ** 9);
-  return `${h ^ (h >>> 9)}`;
-}
-
-function serializeValues(sources: Record<string, { value: unknown }> = {}) {
-  const k = Object.keys(sources);
-  const result: Record<string, unknown> = {};
-  for (let i = 0; i < k.length; i++) {
-    const key = k[i];
-    result[key] = sources[key].value;
-  }
-  return result;
-}
-
-function serializeChildren(root: Owner): GraphRecord {
-  const result: GraphRecord = {};
-  for (let i = 0, len = root.owned!.length; i < len; i++) {
-    const node = root.owned![i];
-    result[node.componentName ? `${node.componentName}:${node.name}` : node.name!] = {
-      ...serializeValues(node.sourceMap),
-      ...(node.owned ? serializeChildren(node) : {})
-    };
-  }
-  return result;
 }
 
 type TODO = any;

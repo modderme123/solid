@@ -472,13 +472,10 @@ export function createStore<T extends object = {}>(
     throw new Error(
       `Unexpected type ${typeof unwrappedStore} received when initializing 'createStore'. Expected an object.`
     );
-  const wrappedStore = wrap(
-    unwrappedStore,
-    "_SOLID_DEV_" && ((options && options.name) || DEV.hashValue(unwrappedStore))
-  );
+  const wrappedStore = wrap(unwrappedStore, "_SOLID_DEV_" && options && options.name);
   if ("_SOLID_DEV_") {
-    const name = (options && options.name) || DEV.hashValue(unwrappedStore);
-    DEV.registerGraph(name, { value: unwrappedStore });
+    const name = options && options.name;
+    DEV.registerGraph(name || "t", { value: unwrappedStore });
   }
   function setStore(...args: any[]): void {
     batch(() => {
