@@ -1,4 +1,4 @@
-import { createRoot, createSignal, createMemo, Accessor } from "../src";
+import { createRoot, createSignal, createMemo, Accessor, createEffect } from "../src";
 
 describe("createMemo", () => {
   describe("executing propagating", () => {
@@ -30,7 +30,7 @@ describe("createMemo", () => {
 
         seq = "";
         setA1(true);
-
+        c1()
         expect(seq).toBe("b1b2c1");
       });
     });
@@ -60,6 +60,7 @@ describe("createMemo", () => {
 
         gcount = 0;
         setD(1);
+        g();
         expect(gcount).toBe(1);
       });
     });
@@ -105,6 +106,7 @@ describe("createMemo", () => {
           });
         hcount = 0;
         setD(1);
+        h();
         expect(hcount).toBe(1);
       });
     });
@@ -117,16 +119,20 @@ describe("createMemo", () => {
           order += "t1";
           return s1();
         });
-        createMemo(() => {
+        const c1 = createMemo(() => {
           order += "c1";
           t1();
         });
-        expect(order).toBe("t1c1");
+
+        c1();
+        expect(order).toBe("c1t1");
         order = "";
         set(1);
+        c1();
         expect(order).toBe("t1");
         order = "";
         set(2);
+        c1();
         expect(order).toBe("t1c1");
       });
     });
@@ -139,19 +145,22 @@ describe("createMemo", () => {
           order += "t1";
           return s1() === 0;
         });
-        createMemo(() => {
+        const c1 = createMemo(() => {
           order += "c1";
           return s1();
         });
-        createMemo(() => {
+        const c2 = createMemo(() => {
           order += "c2";
           return t1();
         });
-
-        expect(order).toBe("t1c1c2");
+        c1();
+        c2();
+        expect(order).toBe("c1c2t1");
         order = "";
         set(1);
-        expect(order).toBe("t1c2c1");
+        c1();
+        c2();
+        expect(order).toBe("c1t1c2");
       });
     });
 
@@ -164,21 +173,25 @@ describe("createMemo", () => {
           order += "t1";
           return s1() === 0;
         });
-        createMemo(() => {
+        const c1 = createMemo(() => {
           order += "c1";
           return s1();
         });
-        createMemo(() => {
+        const c2 = createMemo(() => {
           order += "c2";
           t1();
           createMemo(() => {
             order += "c2_1";
             return s2();
-          });
+          })();
         });
+        c1();
+        c2();
         order = "";
         set(1);
-        expect(order).toBe("t1c2c2_1c1");
+        c1();
+        c2();
+        expect(order).toBe("c1t1c2c2_1");
       });
     });
   });
@@ -199,6 +212,7 @@ describe("createMemo", () => {
         fevals++;
         return i() ? t() : e();
       });
+      f();
       fevals = 0;
     }
 
@@ -206,8 +220,8 @@ describe("createMemo", () => {
       createRoot(() => {
         init();
         setT(5);
-        expect(fevals).toBe(1);
         expect(f()).toBe(5);
+        expect(fevals).toBe(1);
       });
     });
 
@@ -215,8 +229,8 @@ describe("createMemo", () => {
       createRoot(() => {
         init();
         setE(5);
-        expect(fevals).toBe(0);
         expect(f()).toBe(1);
+        expect(fevals).toBe(0);
       });
     });
 
@@ -224,8 +238,10 @@ describe("createMemo", () => {
       createRoot(() => {
         init();
         setI(false);
+        f();
         fevals = 0;
         setT(5);
+        f();
         expect(fevals).toBe(0);
       });
     });
@@ -234,8 +250,10 @@ describe("createMemo", () => {
       createRoot(() => {
         init();
         setI(false);
+        f()
         fevals = 0;
         setE(5);
+        f();
         expect(fevals).toBe(1);
       });
     });
@@ -264,19 +282,26 @@ describe("createMemo", () => {
             return d() + 10;
           });
 
+        b();
+        c();
+        e();
         expect(order).toBe("bcd");
 
         order = "";
         setA(-1);
 
-        expect(order).toBe("bcd");
+        b();
         expect(c()).toBe(9);
+        e();
+        expect(order).toBe("bcd");
 
         order = "";
         setA(0);
-
-        expect(order).toBe("bcd");
+        
+        b();
         expect(c()).toBe(1);
+        e();
+        expect(order).toBe("bcd");
       });
     });
   });
@@ -304,16 +329,19 @@ describe("createMemo", () => {
           const b = s2();
           return a && b;
         });
-        createMemo(() => {
+        const final = createMemo(() => {
           t1();
           t2();
           c1();
           t3();
           count++;
         });
+        final();
         set2(true);
+        final();
         expect(count).toBe(2);
         set1(2);
+        final();
         expect(count).toBe(3);
       });
     });
@@ -338,18 +366,21 @@ describe("createMemo", () => {
           undefined,
           { equals: false }
         );
-        createMemo(() => {
+        const c2 = createMemo(() => {
           order += "c2";
           t1();
           t2();
           c1();
         });
+        c2();
         order = "";
         set(1);
+        c2();
         expect(order).toBe("t1t2c1c2");
         order = "";
         set(3);
-        expect(order).toBe("t2c2t1c1");
+        c2();
+        expect(order).toBe("t1t2c1c2");
       });
     });
 
@@ -359,14 +390,16 @@ describe("createMemo", () => {
         const [s2] = createSignal(1);
         let count = 0;
         let c1: () => number;
-        createMemo(() => {
+        const t1 = createMemo(() => {
           c1 = createMemo(() => s2());
           return s1();
         });
-        createMemo(() => {
+        const t2 = createMemo(() => {
           count++;
           c1();
         });
+        t1();
+        t2();
         set1(2);
         expect(count).toBe(1);
       });
@@ -384,13 +417,15 @@ describe("createMemo", () => {
           order += "t2";
           return s1();
         });
-        createMemo(() => {
+        const c1 = createMemo(() => {
           t1();
           t2();
           order += "c1";
         });
+        c1();
         order = "";
         set(false);
+        c1();
         expect(order).toBe("t1t2c1");
       });
     });
@@ -400,7 +435,7 @@ describe("createMemo", () => {
         const [s1, set] = createSignal(1);
         let order = "";
         let c2: () => boolean;
-        createMemo(() => {
+        const c1 = createMemo(() => {
           order += "c1";
           if (s1() > 1) {
             c2();
@@ -418,11 +453,17 @@ describe("createMemo", () => {
           order += "c2";
           return t2();
         });
+        c1();
+        c2();
         order = "";
         set(2);
+        c1();
+        c2();
         expect(order).toBe("c1t1");
         order = "";
         set(3);
+        c1();
+        c2();
         expect(order).toBe("c1t1t2c2");
       });
     });
@@ -443,12 +484,16 @@ describe("createMemo", () => {
           order += "c2";
           return c1();
         });
-        createMemo(() => {
+        const c3 = createMemo(() => {
           order += "c3";
           return c2();
         });
         order = "";
+        c3();
+        expect(order).toBe("c3c2c1t1");
+        order = ""
         set(2);
+        c3();
         expect(order).toBe("t1c1c2c3");
       });
     });
@@ -476,7 +521,7 @@ describe("createMemo", () => {
           f3 = createMemo(() => f2());
 
         expect(() => {
-          createMemo(() => {
+          createEffect(() => {
             f3();
             set(i++);
           });
@@ -495,6 +540,7 @@ describe("createMemo", () => {
 
         expect(() => {
           set(0);
+          f();
         }).toThrow();
       });
     });

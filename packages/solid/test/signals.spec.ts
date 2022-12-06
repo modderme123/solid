@@ -4,7 +4,6 @@ import {
   createSignal,
   createEffect,
   createRenderEffect,
-  createComputed,
   createReaction,
   createDeferred,
   createMemo,
@@ -351,7 +350,6 @@ describe("Typecheck computed and effects", () => {
         expect(arg).toBe(undefined);
         return arg;
       };
-      createComputed(fn);
       createRenderEffect(fn);
       createEffect(fn);
       setTimeout(() => {
@@ -371,7 +369,6 @@ describe("Typecheck computed and effects", () => {
         expect(arg).toBe(12);
         return arg;
       };
-      createComputed(fn, 12);
       createRenderEffect(fn, 12);
       createEffect(fn, 12);
       setTimeout(() => {
